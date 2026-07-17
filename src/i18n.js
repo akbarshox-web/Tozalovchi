@@ -6,7 +6,7 @@
 export const LANGUAGES = [
   { code: "uz", label: "O'zbek", flag: "🇺🇿" },
   { code: "ru", label: "Русский", flag: "🇷🇺" },
-  { code: "en", label: "English", flag: "en" },
+  { code: "en", label: "English", flag: "🇬🇧" },
 ];
 
 export const DICT = {
