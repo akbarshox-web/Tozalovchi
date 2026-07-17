@@ -23,8 +23,8 @@ export const DICT = {
       deep: { label: "Deep Clean", desc: "165 Hz pulse — most effective for water ejection" },
       fast: { label: "Fast Clean", desc: "250 Hz pulse — fast vibration for light moisture" },
       manual: { label: "Manual", desc: "Custom frequency from 80 Hz to 500 Hz" },
-      turbo: { label: "Turbo ⚡", desc: "300 Hz with 12 Hz LFO — clean in just 30 seconds" },
-      sweep: { label: "Sweep ↔", desc: "Auto-frequency sweep 120–450 Hz — best for stubborn water" },
+      // turbo: { label: "Turbo ⚡", desc: "300 Hz with 12 Hz LFO — clean in just 30 seconds" },
+      //sweep: { label: "Sweep ↔", desc: "Auto-frequency sweep 120–450 Hz — best for stubborn water" },
     },
     controls: {
       manualFreq: "Manual Frequency",

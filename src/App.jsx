@@ -34,8 +34,8 @@ const PRESETS = {
   deep: { key: "deep", baseFreq: 165, lfoRate: 5, lfoDepth: 30, sticker: "wave", turbo: false, sweep: false },
   fast: { key: "fast", baseFreq: 250, lfoRate: 8, lfoDepth: 50, sticker: "lightning", turbo: false, sweep: false },
   manual: { key: "manual", baseFreq: 200, lfoRate: 6, lfoDepth: 25, sticker: "slider", turbo: false, sweep: false },
-  turbo: { key: "turbo", baseFreq: 300, lfoRate: 12, lfoDepth: 80, sticker: "lightning", turbo: true, sweep: true },
-  sweep: { key: "sweep", baseFreq: 200, lfoRate: 10, lfoDepth: 60, sticker: "wave", turbo: false, sweep: true },
+  // turbo: { key: "turbo", baseFreq: 300, lfoRate: 12, lfoDepth: 80, sticker: "lightning", turbo: true, sweep: true },
+  // sweep: { key: "sweep", baseFreq: 200, lfoRate: 10, lfoDepth: 60, sticker: "wave", turbo: false, sweep: true },
 };
 
 const CLEAN_DURATION_MS = 60_000;
