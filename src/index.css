@@ -1,0 +1,101 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ----------------------------------------------------------------------
+   Global resets and body styling
+   ---------------------------------------------------------------------- */
+@layer base {
+  html, body, #root {
+    height: 100%;
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    @apply font-sans antialiased text-slate-100;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "SF Pro Display",
+                 Roboto, "Helvetica Neue", Arial, sans-serif;
+    overscroll-behavior: none;
+  }
+}
+
+/* ----------------------------------------------------------------------
+   Custom keyframes & utilities — referenced by class names in App.jsx
+   ---------------------------------------------------------------------- */
+@layer utilities {
+  /* Slow vertical bobbing for ambient blobs */
+  @keyframes float-slow {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    50%      { transform: translate(20px, -30px) scale(1.05); }
+  }
+  .animate-float-slow { animation: float-slow 8s ease-in-out infinite; }
+
+  /* Slow bounce for header stickers */
+  @keyframes bounce-slow {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(-10px); }
+  }
+  .animate-bounce-slow { animation: bounce-slow 2.4s ease-in-out infinite; }
+
+  /* Pulse for idle hero sticker */
+  @keyframes pulse-slow {
+    0%, 100% { transform: scale(1);    opacity: 1;   }
+    50%      { transform: scale(1.08); opacity: 0.9; }
+  }
+  .animate-pulse-slow { animation: pulse-slow 2.5s ease-in-out infinite; }
+
+  /* Slow spin for cleaning sticker */
+  @keyframes spin-slow {
+    from { transform: rotate(0deg);   }
+    to   { transform: rotate(360deg); }
+  }
+  .animate-spin-slow { animation: spin-slow 6s linear infinite; }
+
+  /* Concentric ripples expanding from the start button */
+  @keyframes ripple {
+    0%   { transform: scale(1);   opacity: 0.7; }
+    100% { transform: scale(1.8); opacity: 0;   }
+  }
+  .animate-ripple { animation: ripple 1.5s ease-out infinite; }
+
+  /* Glowing halo behind the idle button */
+  @keyframes pulse-glow {
+    0%, 100% { opacity: 0.4; transform: scale(1);   }
+    50%      { opacity: 0.8; transform: scale(1.1); }
+  }
+  .animate-pulse-glow { animation: pulse-glow 2s ease-in-out infinite; }
+
+  /* High-frequency vibration on the speaker sticker while cleaning */
+  @keyframes vibrate {
+    0%, 100% { transform: translate(0, 0)        rotate(0);    }
+    25%      { transform: translate(-2px, 1px)   rotate(-2deg); }
+    50%      { transform: translate(2px, -1px)   rotate(2deg);  }
+    75%      { transform: translate(-1px, -2px)  rotate(-1deg); }
+  }
+  .animate-vibrate { animation: vibrate 0.12s linear infinite; }
+
+  /* Falling sticker — from -top to bottom of viewport */
+  @keyframes fall {
+    0%   { transform: translateY(0)     rotate(0);   opacity: 0;   }
+    10%  { opacity: 0.5; }
+    90%  { opacity: 0.5; }
+    100% { transform: translateY(110vh) rotate(360deg); opacity: 0; }
+  }
+  .animate-fall { animation: fall linear infinite; }
+
+  /* Confetti — falls with horizontal drift */
+  @keyframes confetti {
+    0%   { transform: translate(0, 0)       rotate(0);   opacity: 1; }
+    100% { transform: translate(40px, 110vh) rotate(720deg); opacity: 0; }
+  }
+  .animate-confetti { animation: confetti cubic-bezier(0.2, 0.6, 0.4, 1) forwards; }
+
+  /* Subtle full-screen shake during cleaning */
+  @keyframes screen-shake {
+    0%, 100% { transform: translate(0, 0);    }
+    20%      { transform: translate(-1px, 1px); }
+    40%      { transform: translate(1px, -1px); }
+    60%      { transform: translate(-1px, -1px); }
+    80%      { transform: translate(1px, 1px);  }
+  }
+  .animate-screen-shake { animation: screen-shake 0.18s linear infinite; }
+}
