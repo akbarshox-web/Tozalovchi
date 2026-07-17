@@ -29,11 +29,17 @@ import {
 
 /* ============================================================================
  *  PRESETS — frequency targets & LFO behaviour (UI-agnostic)
+ *
+ *  Turbo tezligi: "turbo" rejimida CLEAN_DURATION_MS yarmiga tushadi, va
+ *  sweep chastota har 2 soniyada avtomatik o'zgaradi — bu membrananing turli
+ *  rezonans nuqtalarini qo'zg'atib, suvni tezroq chiqaradi.
  * ========================================================================== */
 const PRESETS = {
-  deep:   { key: "deep",   baseFreq: 165, lfoRate: 5, lfoDepth: 30, sticker: "wave"     },
-  fast:   { key: "fast",   baseFreq: 250, lfoRate: 8, lfoDepth: 50, sticker: "lightning" },
-  manual: { key: "manual", baseFreq: 200, lfoRate: 6, lfoDepth: 25, sticker: "slider"   },
+  deep:    { key: "deep",    baseFreq: 165, lfoRate: 5,  lfoDepth: 30, sticker: "wave",      turbo: false, sweep: false },
+  fast:    { key: "fast",    baseFreq: 250, lfoRate: 8,  lfoDepth: 50, sticker: "lightning", turbo: false, sweep: false },
+  manual:  { key: "manual",  baseFreq: 200, lfoRate: 6,  lfoDepth: 25, sticker: "slider",    turbo: false, sweep: false },
+  turbo:   { key: "turbo",   baseFreq: 300, lfoRate: 12, lfoDepth: 80, sticker: "lightning", turbo: true,  sweep: true  },
+  sweep:   { key: "sweep",   baseFreq: 200, lfoRate: 10, lfoDepth: 60, sticker: "wave",      turbo: false, sweep: true  },
 };
 
 const CLEAN_DURATION_MS = 60_000;
@@ -72,15 +78,22 @@ export default function App() {
   const masterGainRef  = useRef(null);
   const progressRafRef = useRef(null);
   const startTimeRef   = useRef(0);
+  const sweepIntervalRef = useRef(null);
 
   /* ----- Derived -------------------------------------------------------- */
   const preset     = PRESETS[mode];
   const activeFreq = mode === "manual" ? manualFreq : preset.baseFreq;
+  // Turbo rejimida vaqt yarmiga tushadi — suv 2x tezroq tozalanadi
+  const effectiveDuration = preset.turbo ? CLEAN_DURATION_MS / 2 : CLEAN_DURATION_MS;
 
   /* ============================================================================
    *  AUDIO ENGINE
    * ========================================================================== */
   const stopAudioNodes = useCallback(() => {
+    if (sweepIntervalRef.current) {
+      clearInterval(sweepIntervalRef.current);
+      sweepIntervalRef.current = null;
+    }
     [mainOscRef, lfoRef].forEach((ref) => {
       try { ref.current?.stop(); } catch { /* already stopped */ }
       ref.current?.disconnect();
@@ -135,7 +148,23 @@ export default function App() {
 
     osc.start();
     lfo.start();
-  }, [activeFreq, preset.lfoDepth, preset.lfoRate, volume, stopAudioNodes]);
+
+    // Sweep: har 2 soniyada chastota sakrab o'tadi — turli o'lchamdagi
+    // tomchilarga ta'sir qiladi, suv tezroq chiqadi
+    if (preset.sweep) {
+      const freqs = [120, 165, 200, 250, 300, 350, 400, 450];
+      let idx = 0;
+      sweepIntervalRef.current = setInterval(() => {
+        if (!mainOscRef.current || !audioCtxRef.current) return;
+        idx = (idx + 1) % freqs.length;
+        mainOscRef.current.frequency.setTargetAtTime(
+          freqs[idx],
+          audioCtxRef.current.currentTime,
+          0.1
+        );
+      }, 2000);
+    }
+  }, [activeFreq, preset.lfoDepth, preset.lfoRate, preset.sweep, volume, stopAudioNodes]);
 
   /* ----- Live param updates -------------------------------------------- */
   useEffect(() => {
@@ -169,7 +198,7 @@ export default function App() {
 
     const tick = () => {
       const elapsed = performance.now() - startTimeRef.current;
-      const pct = Math.min(100, (elapsed / CLEAN_DURATION_MS) * 100);
+      const pct = Math.min(100, (elapsed / effectiveDuration) * 100);
       setProgress(pct);
 
       if (mainOscRef.current) {
@@ -183,7 +212,7 @@ export default function App() {
       }
     };
     progressRafRef.current = requestAnimationFrame(tick);
-  }, [startAudio]);
+  }, [startAudio, effectiveDuration, finishCleaning]);
 
   const stopCleaning = useCallback(() => {
     cancelAnimationFrame(progressRafRef.current);
@@ -244,10 +273,11 @@ export default function App() {
             preset={preset}
             mode={mode}
             t={t}
+            effectiveDuration={effectiveDuration}
           />
 
           {/* Mode selector */}
-          <div className="mt-6 grid grid-cols-3 gap-2 sm:gap-3">
+          <div className="mt-6 grid grid-cols-3 gap-2 sm:grid-cols-5 sm:gap-3">
             {Object.entries(PRESETS).map(([key, p]) => (
               <ModeButton
                 key={key}
@@ -380,7 +410,7 @@ function Header({ title, tagline, lang, onLang }) {
 }
 
 /* ---------- Hero display: progress ring + status ------------------------ */
-function HeroDisplay({ phase, progress, currentFreq, preset, mode, t }) {
+function HeroDisplay({ phase, progress, currentFreq, preset, mode, t, effectiveDuration }) {
   const status = useMemo(() => {
     if (phase === "cleaning") return { ...t("hero.cleaning"), sticker: "tornado" };
     if (phase === "done")     return { ...t("hero.done"),     sticker: "check"  };
@@ -397,6 +427,9 @@ function HeroDisplay({ phase, progress, currentFreq, preset, mode, t }) {
       default:          return <StWaterDrop  size={120} className="sm:w-36 sm:h-36" />;
     }
   })();
+
+  // effectiveDuration bo'lmasa, standart CLEAN_DURATION_MS ishlatiladi
+  const durationMs = effectiveDuration ?? CLEAN_DURATION_MS;
 
   return (
     <div className="flex flex-col items-center">
@@ -425,7 +458,7 @@ function HeroDisplay({ phase, progress, currentFreq, preset, mode, t }) {
           <Stat
             icon={<span className="text-base">⏱</span>}
             label={t("stats.left")}
-            value={`${Math.max(0, Math.ceil((CLEAN_DURATION_MS * (1 - progress / 100)) / 1000))}s`}
+            value={`${Math.max(0, Math.ceil((durationMs * (1 - progress / 100)) / 1000))}s`}
           />
         </div>
       )}
@@ -525,13 +558,17 @@ function ModeButton({ active, onClick, preset, t, disabled }) {
 }
 
 function accentForMode(key) {
-  if (key === "deep")   return "from-cyan-400 to-blue-500";
-  if (key === "fast")   return "from-fuchsia-400 to-pink-500";
+  if (key === "deep")    return "from-cyan-400 to-blue-500";
+  if (key === "fast")    return "from-fuchsia-400 to-pink-500";
+  if (key === "turbo")   return "from-amber-400 to-red-500";
+  if (key === "sweep")   return "from-emerald-400 to-teal-500";
   return "from-violet-400 to-indigo-500";
 }
 function glowForMode(key) {
-  if (key === "deep")   return "shadow-cyan-500/50";
-  if (key === "fast")   return "shadow-pink-500/50";
+  if (key === "deep")    return "shadow-cyan-500/50";
+  if (key === "fast")    return "shadow-pink-500/50";
+  if (key === "turbo")   return "shadow-amber-500/50";
+  if (key === "sweep")   return "shadow-emerald-500/50";
   return "shadow-violet-500/50";
 }
 

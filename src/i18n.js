@@ -29,6 +29,8 @@ export const DICT = {
       deep:    { label: "Deep Clean",  desc: "165 Hz pulse — most effective for water ejection" },
       fast:    { label: "Fast Clean",  desc: "250 Hz pulse — fast vibration for light moisture" },
       manual:  { label: "Manual",      desc: "Custom frequency from 80 Hz to 500 Hz" },
+      turbo:   { label: "Turbo ⚡",     desc: "300 Hz with 12 Hz LFO — clean in just 30 seconds" },
+      sweep:   { label: "Sweep ↔",     desc: "Auto-frequency sweep 120–450 Hz — best for stubborn water" },
     },
     controls: {
       manualFreq: "Manual Frequency",
@@ -77,6 +79,8 @@ export const DICT = {
       deep:    { label: "Chuqur Tozalash", desc: "165 Hz — suvni eng samarali chiqaradi" },
       fast:    { label: "Tez Tozalash",   desc: "250 Hz — yengil namlik uchun tezkor tebranish" },
       manual:  { label: "Qo'lda",         desc: "80 Hz dan 500 Hz gacha ixtiyoriy chastota" },
+      turbo:   { label: "Tezkor ⚡",       desc: "300 Hz + 12 Hz LFO — atigi 30 soniyada tozalash" },
+      sweep:   { label: "Sweep ↔",        desc: "120–450 Hz avtomatik chastota — qiyin suv uchun eng yaxshi" },
     },
     controls: {
       manualFreq: "Qo'lda Chastota",
@@ -125,6 +129,8 @@ export const DICT = {
       deep:    { label: "Глубокая",   desc: "165 Гц — самый эффективный импульс для удаления воды" },
       fast:    { label: "Быстрая",    desc: "250 Гц — быстрая вибрация для лёгкой влаги" },
       manual:  { label: "Вручную",    desc: "Своя частота от 80 Гц до 500 Гц" },
+      turbo:   { label: "Турбо ⚡",    desc: "300 Гц + 12 Гц LFO — очистка всего за 30 секунд" },
+      sweep:   { label: "Sweep ↔",    desc: "Авто-развёртка 120–450 Гц — для стойкой воды" },
     },
     controls: {
       manualFreq: "Частота",
