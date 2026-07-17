@@ -1,10 +1,10 @@
 {
   "version": 2,
-  "buildCommand": "npm run build",
-  "installCommand": "npm install --no-audit --no-fund",
+  "buildCommand": "chmod +x node_modules/.bin/* 2>/dev/null; npm run build",
+  "installCommand": "npm install --no-audit --no-fund --no-bin-links",
   "framework": "vite",
   "outputDirectory": "dist",
   "engines": {
-    "node": "20.x"
+    "node": "18.x"
   }
 }
