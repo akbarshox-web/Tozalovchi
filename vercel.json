@@ -2,5 +2,9 @@
   "version": 2,
   "buildCommand": "npm run build",
   "installCommand": "npm install --no-audit --no-fund",
-  "framework": "vite"
+  "framework": "vite",
+  "outputDirectory": "dist",
+  "engines": {
+    "node": "20.x"
+  }
 }
