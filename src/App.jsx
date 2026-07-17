@@ -29,33 +29,26 @@ import {
 
 /* ============================================================================
  *  PRESETS — frequency targets & LFO behaviour (UI-agnostic)
- *
- *  Turbo tezligi: "turbo" rejimida CLEAN_DURATION_MS yarmiga tushadi, va
- *  sweep chastota har 2 soniyada avtomatik o'zgaradi — bu membrananing turli
- *  rezonans nuqtalarini qo'zg'atib, suvni tezroq chiqaradi.
  * ========================================================================== */
 const PRESETS = {
-  deep:    { key: "deep",    baseFreq: 165, lfoRate: 5,  lfoDepth: 30, sticker: "wave",      turbo: false, sweep: false },
-  fast:    { key: "fast",    baseFreq: 250, lfoRate: 8,  lfoDepth: 50, sticker: "lightning", turbo: false, sweep: false },
-  manual:  { key: "manual",  baseFreq: 200, lfoRate: 6,  lfoDepth: 25, sticker: "slider",    turbo: false, sweep: false },
-  turbo:   { key: "turbo",   baseFreq: 300, lfoRate: 12, lfoDepth: 80, sticker: "lightning", turbo: true,  sweep: true  },
-  sweep:   { key: "sweep",   baseFreq: 200, lfoRate: 10, lfoDepth: 60, sticker: "wave",      turbo: false, sweep: true  },
+  deep: { key: "deep", baseFreq: 165, lfoRate: 5, lfoDepth: 30, sticker: "wave", turbo: false, sweep: false },
+  fast: { key: "fast", baseFreq: 250, lfoRate: 8, lfoDepth: 50, sticker: "lightning", turbo: false, sweep: false },
+  manual: { key: "manual", baseFreq: 200, lfoRate: 6, lfoDepth: 25, sticker: "slider", turbo: false, sweep: false },
+  turbo: { key: "turbo", baseFreq: 300, lfoRate: 12, lfoDepth: 80, sticker: "lightning", turbo: true, sweep: true },
+  sweep: { key: "sweep", baseFreq: 200, lfoRate: 10, lfoDepth: 60, sticker: "wave", turbo: false, sweep: true },
 };
 
 const CLEAN_DURATION_MS = 60_000;
 const MIN_FREQ = 80;
 const MAX_FREQ = 500;
 
-/* ============================================================================
- *  MAIN APP
- * ========================================================================== */
 export default function App() {
   /* ----- UI state -------------------------------------------------------- */
-  const [lang, setLang] = useState("uz");                // default: Uzbek
+  const [lang, setLang] = useState("uz");
   const [mode, setMode] = useState("deep");
   const [manualFreq, setManualFreq] = useState(200);
   const [volume, setVolume] = useState(0.85);
-  const [phase, setPhase] = useState("idle");            // 'idle' | 'cleaning' | 'done'
+  const [phase, setPhase] = useState("idle"); // 'idle' | 'cleaning' | 'done'
   const [progress, setProgress] = useState(0);
   const [currentFreq, setCurrentFreq] = useState(0);
   const [showConfetti, setShowConfetti] = useState(false);
@@ -70,24 +63,23 @@ export default function App() {
   }, [lang]);
 
   /* ----- Audio refs (persist across renders) ---------------------------- */
-  const audioCtxRef    = useRef(null);
-  const mainOscRef     = useRef(null);
-  const lfoRef         = useRef(null);
-  const lfoGainRef     = useRef(null);
-  const mainGainRef    = useRef(null);
-  const masterGainRef  = useRef(null);
+  const audioCtxRef = useRef(null);
+  const mainOscRef = useRef(null);
+  const lfoRef = useRef(null);
+  const lfoGainRef = useRef(null);
+  const mainGainRef = useRef(null);
+  const masterGainRef = useRef(null);
   const progressRafRef = useRef(null);
-  const startTimeRef   = useRef(0);
+  const startTimeRef = useRef(0);
   const sweepIntervalRef = useRef(null);
 
   /* ----- Derived -------------------------------------------------------- */
-  const preset     = PRESETS[mode];
+  const preset = PRESETS[mode];
   const activeFreq = mode === "manual" ? manualFreq : preset.baseFreq;
-  // Turbo rejimida vaqt yarmiga tushadi — suv 2x tezroq tozalanadi
   const effectiveDuration = preset.turbo ? CLEAN_DURATION_MS / 2 : CLEAN_DURATION_MS;
 
   /* ============================================================================
-   *  AUDIO ENGINE
+   *  AUDIO ENGINE Controls
    * ========================================================================== */
   const stopAudioNodes = useCallback(() => {
     if (sweepIntervalRef.current) {
@@ -114,13 +106,13 @@ export default function App() {
 
     stopAudioNodes();
 
-    // master
+    // master volume
     const master = ctx.createGain();
     master.gain.value = volume;
     master.connect(ctx.destination);
     masterGainRef.current = master;
 
-    // main gain (post-LFO amplitude)
+    // main gain
     const mainGain = ctx.createGain();
     mainGain.gain.value = 0.5;
     mainGain.connect(master);
@@ -133,7 +125,7 @@ export default function App() {
     osc.connect(mainGain);
     mainOscRef.current = osc;
 
-    // LFO -> FM on the carrier frequency
+    // LFO (FM Modulation)
     const lfo = ctx.createOscillator();
     lfo.type = "sine";
     lfo.frequency.value = preset.lfoRate;
@@ -143,14 +135,13 @@ export default function App() {
 
     lfo.connect(lfoGain);
     lfoGain.connect(osc.frequency);
-    lfoRef.current     = lfo;
+    lfoRef.current = lfo;
     lfoGainRef.current = lfoGain;
 
     osc.start();
     lfo.start();
 
-    // Sweep: har 2 soniyada chastota sakrab o'tadi — turli o'lchamdagi
-    // tomchilarga ta'sir qiladi, suv tezroq chiqadi
+    // Frequency Sweep
     if (preset.sweep) {
       const freqs = [120, 165, 200, 250, 300, 350, 400, 450];
       let idx = 0;
@@ -166,28 +157,25 @@ export default function App() {
     }
   }, [activeFreq, preset.lfoDepth, preset.lfoRate, preset.sweep, volume, stopAudioNodes]);
 
-  /* ----- Live param updates -------------------------------------------- */
-  useEffect(() => {
-    if (phase !== "cleaning" || !mainOscRef.current || !audioCtxRef.current) return;
-    mainOscRef.current.frequency.setTargetAtTime(
-      activeFreq,
-      audioCtxRef.current.currentTime,
-      0.05
-    );
-  }, [activeFreq, phase]);
-
-  useEffect(() => {
-    if (phase !== "cleaning" || !masterGainRef.current || !audioCtxRef.current) return;
-    masterGainRef.current.gain.setTargetAtTime(
-      volume,
-      audioCtxRef.current.currentTime,
-      0.05
-    );
-  }, [volume, phase]);
-
   /* ============================================================================
-   *  CLEANING LIFECYCLE
+   *  CLEANING LIFECYCLE (Xatolar to'g'rilangan tartibda)
    * ========================================================================== */
+  const stopCleaning = useCallback(() => {
+    if (progressRafRef.current) {
+      cancelAnimationFrame(progressRafRef.current);
+    }
+    stopAudioNodes();
+    setShake(false);
+    setCurrentFreq(0);
+  }, [stopAudioNodes]);
+
+  const finishCleaning = useCallback(() => {
+    stopCleaning();
+    setPhase("done");
+    setShowConfetti(true);
+    setTimeout(() => setShowConfetti(false), 6000);
+  }, [stopCleaning]);
+
   const startCleaning = useCallback(() => {
     setPhase("cleaning");
     setProgress(0);
@@ -208,25 +196,11 @@ export default function App() {
       if (pct < 100) {
         progressRafRef.current = requestAnimationFrame(tick);
       } else {
-        finishCleaning();
+        finishCleaning(); // Endi xavfsiz chaqiriladi, chunki tepada e'lon qilingan
       }
     };
     progressRafRef.current = requestAnimationFrame(tick);
   }, [startAudio, effectiveDuration, finishCleaning]);
-
-  const stopCleaning = useCallback(() => {
-    cancelAnimationFrame(progressRafRef.current);
-    stopAudioNodes();
-    setShake(false);
-    setCurrentFreq(0);
-  }, [stopAudioNodes]);
-
-  const finishCleaning = useCallback(() => {
-    stopCleaning();
-    setPhase("done");
-    setShowConfetti(true);
-    setTimeout(() => setShowConfetti(false), 6000);
-  }, [stopCleaning]);
 
   const reset = useCallback(() => {
     stopCleaning();
@@ -234,11 +208,34 @@ export default function App() {
     setProgress(0);
   }, [stopCleaning]);
 
-  /* ----- Cleanup on unmount -------------------------------------------- */
-  useEffect(() => () => {
-    cancelAnimationFrame(progressRafRef.current);
-    stopAudioNodes();
-    audioCtxRef.current?.close();
+  /* ----- Live updates ---------------------------------------------------- */
+  useEffect(() => {
+    if (phase !== "cleaning" || !mainOscRef.current || !audioCtxRef.current) return;
+    mainOscRef.current.frequency.setTargetAtTime(
+      activeFreq,
+      audioCtxRef.current.currentTime,
+      0.05
+    );
+  }, [activeFreq, phase]);
+
+  useEffect(() => {
+    if (phase !== "cleaning" || !masterGainRef.current || !audioCtxRef.current) return;
+    masterGainRef.current.gain.setTargetAtTime(
+      volume,
+      audioCtxRef.current.currentTime,
+      0.05
+    );
+  }, [volume, phase]);
+
+  /* ----- Unmount safety cleanup ----------------------------------------- */
+  useEffect(() => {
+    return () => {
+      if (progressRafRef.current) cancelAnimationFrame(progressRafRef.current);
+      stopAudioNodes();
+      if (audioCtxRef.current) {
+        audioCtxRef.current.close().catch(() => { });
+      }
+    };
   }, [stopAudioNodes]);
 
   /* ============================================================================
@@ -256,7 +253,6 @@ export default function App() {
       {showConfetti && <Confetti />}
 
       <main className="relative z-10 mx-auto flex min-h-screen max-w-3xl flex-col items-center px-4 pb-16 pt-6 sm:px-6 sm:pt-8">
-        {/* ----- HEADER + LANG SWITCHER --------------------------------- */}
         <Header
           title={t("nav.title")}
           tagline={t("nav.tagline")}
@@ -264,7 +260,6 @@ export default function App() {
           onLang={setLang}
         />
 
-        {/* ----- HERO CARD ---------------------------------------------- */}
         <section className="mt-6 w-full rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur-xl sm:p-8">
           <HeroDisplay
             phase={phase}
@@ -276,7 +271,6 @@ export default function App() {
             effectiveDuration={effectiveDuration}
           />
 
-          {/* Mode selector */}
           <div className="mt-6 grid grid-cols-3 gap-2 sm:grid-cols-5 sm:gap-3">
             {Object.entries(PRESETS).map(([key, p]) => (
               <ModeButton
@@ -312,7 +306,6 @@ export default function App() {
             disabled={isCleaning(phase)}
           />
 
-          {/* Master action */}
           <div className="mt-8 flex justify-center">
             {phase === "done" ? (
               <button
@@ -337,10 +330,8 @@ export default function App() {
           </div>
         </section>
 
-        {/* ----- RULES -------------------------------------------------- */}
         <Rules t={t} />
 
-        {/* ----- FOOTER ------------------------------------------------- */}
         <footer className="mt-10 text-center text-xs text-slate-400/70">
           <p>💡 {t("footer.tip")}</p>
           <p className="mt-1 opacity-60">{t("footer.made")}</p>
@@ -351,15 +342,11 @@ export default function App() {
 }
 
 /* ============================================================================
- *  HELPERS
+ *  YORDAMCHI SUB-KOMPONENTLAR
  * ========================================================================== */
+
 const isCleaning = (phase) => phase === "cleaning";
 
-/* ============================================================================
- *  SUB-COMPONENTS
- * ========================================================================== */
-
-/* ---------- Header + Language switcher ---------------------------------- */
 function Header({ title, tagline, lang, onLang }) {
   return (
     <header className="w-full">
@@ -381,7 +368,6 @@ function Header({ title, tagline, lang, onLang }) {
         <p className="mt-2 text-sm text-slate-300/80 sm:text-base">{tagline}</p>
       </div>
 
-      {/* Language switcher */}
       <nav
         className="mx-auto mt-4 flex w-fit items-center gap-1 rounded-full border
                    border-white/10 bg-white/5 p-1 backdrop-blur"
@@ -397,8 +383,8 @@ function Header({ title, tagline, lang, onLang }) {
             className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs
                         font-bold transition sm:text-sm
                         ${lang === l.code
-                          ? "bg-gradient-to-r from-cyan-400 to-fuchsia-400 text-slate-900 shadow"
-                          : "text-slate-300 hover:bg-white/10"}`}
+                ? "bg-gradient-to-r from-cyan-400 to-fuchsia-400 text-slate-900 shadow"
+                : "text-slate-300 hover:bg-white/10"}`}
           >
             <span>{l.flag}</span>
             <span>{l.label}</span>
@@ -409,26 +395,24 @@ function Header({ title, tagline, lang, onLang }) {
   );
 }
 
-/* ---------- Hero display: progress ring + status ------------------------ */
 function HeroDisplay({ phase, progress, currentFreq, preset, mode, t, effectiveDuration }) {
   const status = useMemo(() => {
     if (phase === "cleaning") return { ...t("hero.cleaning"), sticker: "tornado" };
-    if (phase === "done")     return { ...t("hero.done"),     sticker: "check"  };
+    if (phase === "done") return { ...t("hero.done"), sticker: "check" };
     return { ...t("hero.idle"), sticker: preset.sticker };
   }, [phase, preset, t]);
 
   const stickerEl = (() => {
     switch (status.sticker) {
-      case "tornado":   return <StTornado    size={120} className="sm:w-36 sm:h-36" />;
-      case "check":     return <StCheck      size={120} className="sm:w-36 sm:h-36" />;
-      case "wave":      return <StWave       size={120} className="sm:w-36 sm:h-36" />;
-      case "lightning": return <StLightning  size={120} className="sm:w-36 sm:h-36" />;
-      case "slider":    return <StSlider     size={120} className="sm:w-36 sm:h-36" />;
-      default:          return <StWaterDrop  size={120} className="sm:w-36 sm:h-36" />;
+      case "tornado": return <StTornado size={120} className="sm:w-36 sm:h-36" />;
+      case "check": return <StCheck size={120} className="sm:w-36 sm:h-36" />;
+      case "wave": return <StWave size={120} className="sm:w-36 sm:h-36" />;
+      case "lightning": return <StLightning size={120} className="sm:w-36 sm:h-36" />;
+      case "slider": return <StSlider size={120} className="sm:w-36 sm:h-36" />;
+      default: return <StWaterDrop size={120} className="sm:w-36 sm:h-36" />;
     }
   })();
 
-  // effectiveDuration bo'lmasa, standart CLEAN_DURATION_MS ishlatiladi
   const durationMs = effectiveDuration ?? CLEAN_DURATION_MS;
 
   return (
@@ -466,7 +450,6 @@ function HeroDisplay({ phase, progress, currentFreq, preset, mode, t, effectiveD
   );
 }
 
-/* ---------- Progress ring ---------------------------------------------- */
 function ProgressRing({ progress, active, done, t }) {
   const radius = 90;
   const circumference = 2 * Math.PI * radius;
@@ -515,7 +498,6 @@ function ProgressRing({ progress, active, done, t }) {
   );
 }
 
-/* ---------- Small stat pill -------------------------------------------- */
 function Stat({ icon, label, value }) {
   return (
     <div className="flex items-center gap-2 rounded-full bg-white/5 px-3 py-1.5">
@@ -526,12 +508,11 @@ function Stat({ icon, label, value }) {
   );
 }
 
-/* ---------- Mode button ------------------------------------------------- */
 function ModeButton({ active, onClick, preset, t, disabled }) {
   const Sticker =
-    preset.sticker === "wave"      ? StWave :
-    preset.sticker === "lightning" ? StLightning :
-    StSlider;
+    preset.sticker === "wave" ? StWave :
+      preset.sticker === "lightning" ? StLightning :
+        StSlider;
 
   return (
     <button
@@ -540,11 +521,11 @@ function ModeButton({ active, onClick, preset, t, disabled }) {
       className={`group relative overflow-hidden rounded-2xl border p-3 text-left
                   transition-all duration-200 sm:p-4
                   ${active
-                    ? `border-white/30 bg-gradient-to-br
+          ? `border-white/30 bg-gradient-to-br
                        ${accentForMode(preset.key)} text-white shadow-lg
                        ${glowForMode(preset.key)} scale-105`
-                    : "border-white/10 bg-white/5 text-slate-300 hover:bg-white/10 hover:scale-105"
-                  }
+          : "border-white/10 bg-white/5 text-slate-300 hover:bg-white/10 hover:scale-105"
+        }
                   ${disabled ? "opacity-40 cursor-not-allowed" : "cursor-pointer"}`}
     >
       <div className="mx-auto w-10 sm:w-12">
@@ -558,21 +539,20 @@ function ModeButton({ active, onClick, preset, t, disabled }) {
 }
 
 function accentForMode(key) {
-  if (key === "deep")    return "from-cyan-400 to-blue-500";
-  if (key === "fast")    return "from-fuchsia-400 to-pink-500";
-  if (key === "turbo")   return "from-amber-400 to-red-500";
-  if (key === "sweep")   return "from-emerald-400 to-teal-500";
+  if (key === "deep") return "from-cyan-400 to-blue-500";
+  if (key === "fast") return "from-fuchsia-400 to-pink-500";
+  if (key === "turbo") return "from-amber-400 to-red-500";
+  if (key === "sweep") return "from-emerald-400 to-teal-500";
   return "from-violet-400 to-indigo-500";
 }
 function glowForMode(key) {
-  if (key === "deep")    return "shadow-cyan-500/50";
-  if (key === "fast")    return "shadow-pink-500/50";
-  if (key === "turbo")   return "shadow-amber-500/50";
-  if (key === "sweep")   return "shadow-emerald-500/50";
+  if (key === "deep") return "shadow-cyan-500/50";
+  if (key === "fast") return "shadow-pink-500/50";
+  if (key === "turbo") return "shadow-amber-500/50";
+  if (key === "sweep") return "shadow-emerald-500/50";
   return "shadow-violet-500/50";
 }
 
-/* ---------- Slider (generic) ------------------------------------------- */
 function Slider({ label, value, min, max, unit, onChange, disabled }) {
   return (
     <div className="mt-4">
@@ -595,7 +575,6 @@ function Slider({ label, value, min, max, unit, onChange, disabled }) {
   );
 }
 
-/* ---------- Cleaning button -------------------------------------------- */
 function CleaningButton({ phase, onStart, onStop, t }) {
   const cleaning = phase === "cleaning";
 
@@ -607,8 +586,8 @@ function CleaningButton({ phase, onStart, onStop, t }) {
                   rounded-full transition-transform active:scale-95
                   sm:h-52 sm:w-52
                   ${cleaning
-                    ? "bg-gradient-to-br from-fuchsia-500 to-pink-600 shadow-2xl shadow-pink-500/50"
-                    : "bg-gradient-to-br from-cyan-500 to-blue-600 shadow-2xl shadow-cyan-500/40 hover:scale-105"}`}
+          ? "bg-gradient-to-br from-fuchsia-500 to-pink-600 shadow-2xl shadow-pink-500/50"
+          : "bg-gradient-to-br from-cyan-500 to-blue-600 shadow-2xl shadow-cyan-500/40 hover:scale-105"}`}
     >
       {cleaning && (
         <>
@@ -634,9 +613,8 @@ function CleaningButton({ phase, onStart, onStop, t }) {
   );
 }
 
-/* ---------- Rules list ------------------------------------------------- */
 function Rules({ t }) {
-  const ruleKeys = ["deep", "volume", "plug", "stop"]; // logical order
+  const ruleKeys = ["deep", "volume", "plug", "stop"];
   const stickers = [StPhoneDown, StVolumeMax, StPlugUnplug, StNoStop];
   const colors = [
     "from-cyan-500/20 to-cyan-500/5 border-cyan-400/30",
@@ -690,7 +668,6 @@ function Rules({ t }) {
   );
 }
 
-/* ---------- Falling water droplets ------------------------------------- */
 function Droplets() {
   const drops = useMemo(
     () =>
@@ -699,7 +676,7 @@ function Droplets() {
         delay: `${(i * 0.27) % 4}s`,
         duration: `${2 + ((i * 37) % 30) / 10}s`,
         size: 18 + (i % 4) * 6,
-        type: i % 3, // 0/1/2 -> drop / mini / sparkle
+        type: i % 3,
       })),
     []
   );
@@ -731,7 +708,6 @@ function Droplets() {
   );
 }
 
-/* ---------- Confetti burst --------------------------------------------- */
 function Confetti() {
   const pieces = useMemo(
     () =>
@@ -740,7 +716,7 @@ function Confetti() {
         delay: `${(i * 0.05) % 2}s`,
         duration: `${2 + ((i * 13) % 30) / 10}s`,
         size: 18 + (i % 4) * 6,
-        kind: i % 4, // 0/1/2/3 -> sparkle / star / drop / check
+        kind: i % 4,
       })),
     []
   );
@@ -774,7 +750,6 @@ function Confetti() {
   );
 }
 
-/* ---------- Ambient background blobs ----------------------------------- */
 function BackdropOrbs() {
   return (
     <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden" aria-hidden>
@@ -784,7 +759,7 @@ function BackdropOrbs() {
                       blur-3xl animate-float-slow" style={{ animationDelay: "1.5s" }} />
       <div className="absolute top-1/2 left-1/2 h-72 w-72 -translate-x-1/2 -translate-y-1/2
                       rounded-full bg-violet-500/15 blur-3xl animate-float-slow"
-           style={{ animationDelay: "0.7s" }} />
+        style={{ animationDelay: "0.7s" }} />
     </div>
   );
 }
